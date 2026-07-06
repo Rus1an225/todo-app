@@ -24,7 +24,7 @@
 
 ## Деплой
 
-https://6a3d531c21264d0f7165f8df--tiny-sprite-3001ba.netlify.app/
+
 
 ## Локальный запуск
 

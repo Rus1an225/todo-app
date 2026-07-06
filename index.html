@@ -5,40 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo List App</title>
     <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Мои задачи</h1>
-        
-        <div class="todo-input-section">
-            <input type="text" id="todoInput" placeholder="Добавить новую задачу..." />
-            <select id="prioritySelect">
-                <option value="high">🔴 Высокий</option>
-                <option value="medium" selected>🟡 Средний</option>
-                <option value="low">🟢 Низкий</option>
-            </select>
-            <input type="date" id="dueDateInput" />
-            <button id="addButton">Добавить</button>
-        </div>
-        
-        <div class="todo-filters">
-            <button class="filter-btn active" data-filter="all">Все</button>
-            <button class="filter-btn" data-filter="active">Активные</button>
-            <button class="filter-btn" data-filter="completed">Выполненные</button>
-        </div>
-        
-        <div class="todo-actions">
-            <button id="themeToggle">🌙 Тёмная тема</button>
-            <button id="clearAll">Очистить всё</button>
-        </div>
-        
-        <ul id="todoList" class="todo-list"></ul>
-        
-        <div class="todo-stats">
-            <span id="taskCount">0</span> задач осталось
+    <div class="auth-wrapper" id="authContainer">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h1>Todo App</h1>
+                <p class="auth-subtitle">Управляйте своими задачами легко</p>
+            </div>
+            
+            <div id="authForm">
+                <div class="auth-error" id="authError"></div>
+                
+                <div class="auth-input-group">
+                    <div class="input-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <input type="email" id="authEmail" placeholder="Электронная почта" />
+                </div>
+                
+                <div class="auth-input-group">
+                    <div class="input-icon">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <input type="password" id="authPassword" placeholder="Пароль" />
+                </div>
+                
+                <button id="authButton" class="auth-btn">
+                    <span>Войти</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+                
+                <div class="auth-footer">
+                    <button id="switchToRegister" class="auth-switch-btn">
+                        Нет аккаунта? <span>Зарегистрироваться</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-    
+
+    <div class="todo-wrapper" id="todoContainer" style="display: none;">
+        <div class="todo-card">
+            <div class="todo-header">
+                <h1><i class="fas fa-tasks"></i> Мои задачи</h1>
+                <button id="logoutButton" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Выйти
+                </button>
+            </div>
+            
+            <div class="todo-input-section">
+                <input type="text" id="todoInput" placeholder="Добавить новую задачу..." />
+                <select id="prioritySelect">
+                    <option value="high">🔴 Высокий</option>
+                    <option value="medium" selected>🟡 Средний</option>
+                    <option value="low">🟢 Низкий</option>
+                </select>
+                <input type="date" id="dueDateInput" />
+                <button id="addButton"><i class="fas fa-plus"></i> Добавить</button>
+            </div>
+            
+            <div class="todo-filters">
+                <button class="filter-btn active" data-filter="all">Все</button>
+                <button class="filter-btn" data-filter="active">Активные</button>
+                <button class="filter-btn" data-filter="completed">Выполненные</button>
+            </div>
+            
+            <div class="todo-actions">
+                <button id="themeToggle"><i class="fas fa-moon"></i> Тёмная тема</button>
+                <button id="clearAll"><i class="fas fa-trash-alt"></i> Очистить всё</button>
+            </div>
+            
+            <ul id="todoList" class="todo-list"></ul>
+            
+            <div class="todo-stats">
+                <span id="taskCount">0</span> задач осталось
+            </div>
+        </div>
+    </div>
+
     <script src="js/app.js"></script>
 </body>
 </html>

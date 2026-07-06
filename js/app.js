@@ -1,36 +1,99 @@
+const API_URL = 'http://localhost:5000/api';
+
 let todos = [];
 let currentFilter = 'all';
+let token = localStorage.getItem('token');
 
-function loadTodos() {
-    const storedTodos = localStorage.getItem('todos');
-    if (storedTodos) {
-        todos = JSON.parse(storedTodos);
+function checkAuth() {
+    if (token) {
+        document.getElementById('authContainer').style.display = 'none';
+        document.getElementById('todoContainer').style.display = 'block';
+        loadTodos();
+    } else {
+        document.getElementById('authContainer').style.display = 'block';
+        document.getElementById('todoContainer').style.display = 'none';
     }
-    renderTodos();
 }
 
-function saveTodos() {
-    localStorage.setItem('todos', JSON.stringify(todos));
+function toggleAuthMode() {
+    const button = document.getElementById('authButton');
+    const link = document.getElementById('switchToRegister');
+    if (button.textContent === 'Войти') {
+        button.textContent = 'Зарегистрироваться';
+        link.textContent = 'Уже есть аккаунт? Войти';
+    } else {
+        button.textContent = 'Войти';
+        link.textContent = 'Нет аккаунта? Зарегистрироваться';
+    }
+    document.getElementById('authError').textContent = '';
 }
 
-function formatDate(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+async function handleAuth() {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value.trim();
+    const errorEl = document.getElementById('authError');
+    
+    if (!email || !password) {
+        errorEl.textContent = 'Заполните все поля';
+        errorEl.classList.add('show');
+        return;
+    }
+    
+    const isRegister = document.getElementById('authButton').textContent === 'Зарегистрироваться';
+    const endpoint = isRegister ? '/register' : '/login';
+    
+    try {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            token = data.token;
+            localStorage.setItem('token', token);
+            errorEl.textContent = '';
+            errorEl.classList.remove('show');
+            checkAuth();
+        } else {
+            errorEl.textContent = data.error || 'Ошибка авторизации';
+            errorEl.classList.add('show');
+        }
+    } catch (error) {
+        errorEl.textContent = 'Ошибка соединения с сервером';
+        errorEl.classList.add('show');
+        console.error('Auth error:', error);
+    }
 }
 
-function isOverdue(todo) {
-    if (!todo.dueDate || todo.completed) return false;
-    return new Date(todo.dueDate) < new Date();
+function logout() {
+    localStorage.removeItem('token');
+    token = null;
+    checkAuth();
 }
 
-function addTodo() {
+async function loadTodos() {
+    if (!token) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/todos`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            todos = await response.json();
+            renderTodos();
+        } else if (response.status === 401) {
+            logout();
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки:', error);
+    }
+}
+
+async function addTodo() {
     const input = document.getElementById('todoInput');
     const prioritySelect = document.getElementById('prioritySelect');
     const dueDateInput = document.getElementById('dueDateInput');
@@ -41,70 +104,131 @@ function addTodo() {
         return;
     }
     
-    const newTodo = {
-        id: Date.now(),
-        text: text,
-        completed: false,
-        priority: prioritySelect.value,
-        createdAt: new Date().toISOString(),
-        dueDate: dueDateInput.value || null
-    };
-    
-    todos.push(newTodo);
-    saveTodos();
-    renderTodos();
-    
-    input.value = '';
-    dueDateInput.value = '';
-    input.focus();
-}
-
-function deleteTodo(id) {
-    todos = todos.filter(todo => todo.id !== id);
-    saveTodos();
-    renderTodos();
-}
-
-function toggleTodo(id) {
-    const todo = todos.find(todo => todo.id === id);
-    if (todo) {
-        todo.completed = !todo.completed;
-        saveTodos();
-        renderTodos();
+    try {
+        const response = await fetch(`${API_URL}/todos`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                text: text,
+                priority: prioritySelect.value,
+                due_date: dueDateInput.value || null
+            })
+        });
+        
+        if (response.ok) {
+            const newTodo = await response.json();
+            todos.push(newTodo);
+            renderTodos();
+            input.value = '';
+            dueDateInput.value = '';
+            input.focus();
+        } else if (response.status === 401) {
+            logout();
+        }
+    } catch (error) {
+        console.error('Ошибка добавления:', error);
     }
 }
 
-function editTodo(id) {
-    const todo = todos.find(todo => todo.id === id);
+async function deleteTodo(id) {
+    try {
+        const response = await fetch(`${API_URL}/todos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            todos = todos.filter(t => t.id !== id);
+            renderTodos();
+        } else if (response.status === 401) {
+            logout();
+        }
+    } catch (error) {
+        console.error('Ошибка удаления:', error);
+    }
+}
+
+async function toggleTodo(id) {
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/todos/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ completed: !todo.completed })
+        });
+        
+        if (response.ok) {
+            const updated = await response.json();
+            const index = todos.findIndex(t => t.id === id);
+            todos[index] = updated;
+            renderTodos();
+        } else if (response.status === 401) {
+            logout();
+        }
+    } catch (error) {
+        console.error('Ошибка обновления:', error);
+    }
+}
+
+async function editTodo(id) {
+    const todo = todos.find(t => t.id === id);
     if (!todo) return;
     
     const newText = prompt('Редактировать задачу:', todo.text);
-    if (newText !== null && newText.trim() !== '') {
-        todo.text = newText.trim();
-        saveTodos();
-        renderTodos();
+    if (newText === null) return;
+    if (newText.trim() === '') {
+        alert('Текст не может быть пустым');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/todos/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ text: newText.trim() })
+        });
+        
+        if (response.ok) {
+            const updated = await response.json();
+            const index = todos.findIndex(t => t.id === id);
+            todos[index] = updated;
+            renderTodos();
+        } else if (response.status === 401) {
+            logout();
+        }
+    } catch (error) {
+        console.error('Ошибка редактирования:', error);
     }
 }
 
-function clearAllTodos() {
+async function clearAllTodos() {
     if (todos.length === 0) return;
-    if (confirm('Вы уверены, что хотите удалить все задачи?')) {
-        todos = [];
-        saveTodos();
-        renderTodos();
+    if (!confirm('Вы уверены, что хотите удалить все задачи?')) return;
+    
+    for (const todo of todos) {
+        await deleteTodo(todo.id);
     }
 }
 
 function setFilter(filter) {
     currentFilter = filter;
-    
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('active');
         if (btn.dataset.filter === filter) {
             btn.classList.add('active');
         }
     });
-    
     renderTodos();
 }
 
@@ -121,6 +245,23 @@ function toggleTheme() {
     document.body.classList.toggle('dark-theme');
     const button = document.getElementById('themeToggle');
     button.textContent = document.body.classList.contains('dark-theme') ? '☀️ Светлая тема' : '🌙 Тёмная тема';
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function isOverdue(todo) {
+    if (!todo.due_date || todo.completed) return false;
+    return new Date(todo.due_date) < new Date();
 }
 
 function escapeHtml(text) {
@@ -142,8 +283,8 @@ function renderTodos() {
     }
     
     todoList.innerHTML = filteredTodos.map(todo => {
-        const dueDateHtml = todo.dueDate 
-            ? `<span class="todo-due ${isOverdue(todo) ? 'overdue' : ''}">📅 ${formatDate(todo.dueDate)}</span>` 
+        const dueDateHtml = todo.due_date 
+            ? `<span class="todo-due ${isOverdue(todo) ? 'overdue' : ''}">📅 ${formatDate(todo.due_date)}</span>` 
             : '';
         const overdueClass = isOverdue(todo) ? 'overdue' : '';
         
@@ -160,20 +301,25 @@ function renderTodos() {
     
     document.querySelectorAll('.todo-item').forEach(item => {
         const id = parseInt(item.dataset.id);
-        
         const checkbox = item.querySelector('.todo-checkbox');
         checkbox.addEventListener('change', () => toggleTodo(id));
-        
         const deleteBtn = item.querySelector('.todo-delete');
         deleteBtn.addEventListener('click', () => deleteTodo(id));
-        
         const textSpan = item.querySelector('.todo-text');
         textSpan.addEventListener('dblclick', () => editTodo(id));
     });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadTodos();
+    document.getElementById('authButton').addEventListener('click', handleAuth);
+    document.getElementById('authEmail').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleAuth();
+    });
+    document.getElementById('authPassword').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleAuth();
+    });
+    document.getElementById('switchToRegister').addEventListener('click', toggleAuthMode);
+    document.getElementById('logoutButton').addEventListener('click', logout);
     
     document.getElementById('addButton').addEventListener('click', addTodo);
     document.getElementById('todoInput').addEventListener('keypress', (e) => {
@@ -185,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
-    
     document.getElementById('clearAll').addEventListener('click', clearAllTodos);
+    
+    checkAuth();
 });

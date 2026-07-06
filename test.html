@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест TODO</title>
+</head>
+<body>
+    <h1>Список задач</h1>
+    <ul id="list"></ul>
+    <input type="text" id="text" placeholder="Задача">
+    <button onclick="addTodo()">Добавить</button>
+
+    <script>
+        const API = 'http://localhost:5000/api';
+
+        async function loadTodos() {
+            const res = await fetch(`${API}/todos`);
+            const todos = await res.json();
+            document.getElementById('list').innerHTML = todos.map(t => 
+                `<li>${t.text} <button onclick="deleteTodo(${t.id})">Удалить</button></li>`
+            ).join('');
+        }
+
+        async function addTodo() {
+            const input = document.getElementById('text');
+            await fetch(`${API}/todos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: input.value })
+            });
+            input.value = '';
+            loadTodos();
+        }
+
+        async function deleteTodo(id) {
+            await fetch(`${API}/todos/${id}`, { method: 'DELETE' });
+            loadTodos();
+        }
+
+        loadTodos();
+    </script>
+</body>
+</html>
