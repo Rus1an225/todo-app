@@ -1,17 +1,9 @@
-// =============================================
-// 1. НАСТРОЙКИ SUPABASE
-// =============================================
-
 const SUPABASE_URL = 'https://foqqwmuwvnljtzecwsmm.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_kh6AM_-0qmbr0MUH8T54Bg_urE6cRAu';
 
 let todos = [];
 let currentFilter = 'all';
 let token = localStorage.getItem('token');
-
-// =============================================
-// 2. АВТОРИЗАЦИЯ (через Supabase)
-// =============================================
 
 function checkAuth() {
     if (token) {
@@ -37,7 +29,6 @@ function toggleAuthMode() {
     document.getElementById('authError').textContent = '';
 }
 
-// Регистрация через Supabase
 async function register(email, password) {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
         method: 'POST',
@@ -50,7 +41,6 @@ async function register(email, password) {
     return await response.json();
 }
 
-// Вход через Supabase
 async function login(email, password) {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
         method: 'POST',
@@ -68,11 +58,17 @@ async function handleAuth() {
     const password = document.getElementById('authPassword').value.trim();
     const errorEl = document.getElementById('authError');
     
-    if (!email || !password) {
-        errorEl.textContent = 'Заполните все поля';
-        errorEl.classList.add('show');
-        return;
+	if (!email || !password) {
+    errorEl.textContent = 'Заполните все поля';
+    errorEl.classList.add('show');
+    return;
     }
+
+	if (password.length < 6) {
+    errorEl.textContent = 'Пароль должен быть не менее 6 символов';
+    errorEl.classList.add('show');
+    return;
+	}
     
     const isRegister = document.getElementById('authButton').textContent === 'Зарегистрироваться';
     
@@ -106,10 +102,6 @@ function logout() {
     token = null;
     checkAuth();
 }
-
-// =============================================
-// 3. РАБОТА С ЗАДАЧАМИ (через Supabase)
-// =============================================
 
 async function loadTodos() {
     if (!token) return;
@@ -267,10 +259,6 @@ async function clearAllTodos() {
     }
 }
 
-// =============================================
-// 4. ФИЛЬТРАЦИЯ И ОТОБРАЖЕНИЕ
-// =============================================
-
 function setFilter(filter) {
     currentFilter = filter;
     document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -359,10 +347,6 @@ function renderTodos() {
         textSpan.addEventListener('dblclick', () => editTodo(id));
     });
 }
-
-// =============================================
-// 5. ЗАПУСК
-// =============================================
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('authButton').addEventListener('click', handleAuth);
