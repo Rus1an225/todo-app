@@ -1,8 +1,17 @@
-const API_URL = 'http://localhost:5000/api';
+// =============================================
+// 1. НАСТРОЙКИ SUPABASE
+// =============================================
+
+const SUPABASE_URL = 'https://foqqwmuwvnljtzecwsmm.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_kh6AM_-0qmbr0MUH8T54Bg_urE6cRAu';
 
 let todos = [];
 let currentFilter = 'all';
 let token = localStorage.getItem('token');
+
+// =============================================
+// 2. АВТОРИЗАЦИЯ (через Supabase)
+// =============================================
 
 function checkAuth() {
     if (token) {
@@ -28,6 +37,32 @@ function toggleAuthMode() {
     document.getElementById('authError').textContent = '';
 }
 
+// Регистрация через Supabase
+async function register(email, password) {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({ email, password })
+    });
+    return await response.json();
+}
+
+// Вход через Supabase
+async function login(email, password) {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({ email, password })
+    });
+    return await response.json();
+}
+
 async function handleAuth() {
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value.trim();
@@ -40,25 +75,23 @@ async function handleAuth() {
     }
     
     const isRegister = document.getElementById('authButton').textContent === 'Зарегистрироваться';
-    const endpoint = isRegister ? '/register' : '/login';
     
     try {
-        const response = await fetch(`${API_URL}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
+        let data;
+        if (isRegister) {
+            data = await register(email, password);
+        } else {
+            data = await login(email, password);
+        }
         
-        const data = await response.json();
-        
-        if (response.ok) {
-            token = data.token;
+        if (data.access_token) {
+            token = data.access_token;
             localStorage.setItem('token', token);
             errorEl.textContent = '';
             errorEl.classList.remove('show');
             checkAuth();
         } else {
-            errorEl.textContent = data.error || 'Ошибка авторизации';
+            errorEl.textContent = data.message || data.error_description || 'Ошибка авторизации';
             errorEl.classList.add('show');
         }
     } catch (error) {
@@ -74,12 +107,19 @@ function logout() {
     checkAuth();
 }
 
+// =============================================
+// 3. РАБОТА С ЗАДАЧАМИ (через Supabase)
+// =============================================
+
 async function loadTodos() {
     if (!token) return;
     
     try {
-        const response = await fetch(`${API_URL}/todos`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/todos?select=*`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${token}`
+            }
         });
         
         if (response.ok) {
@@ -105,10 +145,11 @@ async function addTodo() {
     }
     
     try {
-        const response = await fetch(`${API_URL}/todos`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/todos`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
@@ -135,9 +176,12 @@ async function addTodo() {
 
 async function deleteTodo(id) {
     try {
-        const response = await fetch(`${API_URL}/todos/${id}`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/todos?id=eq.${id}`, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${token}`
+            }
         });
         
         if (response.ok) {
@@ -156,10 +200,11 @@ async function toggleTodo(id) {
     if (!todo) return;
     
     try {
-        const response = await fetch(`${API_URL}/todos/${id}`, {
-            method: 'PUT',
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/todos?id=eq.${id}`, {
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ completed: !todo.completed })
@@ -168,7 +213,7 @@ async function toggleTodo(id) {
         if (response.ok) {
             const updated = await response.json();
             const index = todos.findIndex(t => t.id === id);
-            todos[index] = updated;
+            todos[index] = updated[0];
             renderTodos();
         } else if (response.status === 401) {
             logout();
@@ -190,10 +235,11 @@ async function editTodo(id) {
     }
     
     try {
-        const response = await fetch(`${API_URL}/todos/${id}`, {
-            method: 'PUT',
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/todos?id=eq.${id}`, {
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ text: newText.trim() })
@@ -202,7 +248,7 @@ async function editTodo(id) {
         if (response.ok) {
             const updated = await response.json();
             const index = todos.findIndex(t => t.id === id);
-            todos[index] = updated;
+            todos[index] = updated[0];
             renderTodos();
         } else if (response.status === 401) {
             logout();
@@ -220,6 +266,10 @@ async function clearAllTodos() {
         await deleteTodo(todo.id);
     }
 }
+
+// =============================================
+// 4. ФИЛЬТРАЦИЯ И ОТОБРАЖЕНИЕ
+// =============================================
 
 function setFilter(filter) {
     currentFilter = filter;
@@ -292,7 +342,7 @@ function renderTodos() {
             <li class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority} ${overdueClass}" data-id="${todo.id}">
                 <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
                 <span class="todo-text">${escapeHtml(todo.text)}</span>
-                <span class="todo-date">🕒 ${formatDate(todo.createdAt)}</span>
+                <span class="todo-date">🕒 ${formatDate(todo.created_at)}</span>
                 ${dueDateHtml}
                 <button class="todo-delete">Удалить</button>
             </li>
@@ -309,6 +359,10 @@ function renderTodos() {
         textSpan.addEventListener('dblclick', () => editTodo(id));
     });
 }
+
+// =============================================
+// 5. ЗАПУСК
+// =============================================
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('authButton').addEventListener('click', handleAuth);
