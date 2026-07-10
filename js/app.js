@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://foqqwmuwvnljtzecwsmm.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_kh6AM_-0qmbr0MUH8T54Bg_urE6c_';
+const SUPABASE_ANON_KEY = 'sb_publishable_kh6AM_-0qmbr0MUH8T54Bg_urE6cRAu';
 
 let todos = [];
 let currentFilter = 'all';
