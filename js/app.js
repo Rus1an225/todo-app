@@ -127,8 +127,6 @@ async function loadTodos() {
 
 async function addTodo() {
     const input = document.getElementById('todoInput');
-    const prioritySelect = document.getElementById('prioritySelect');
-    const dueDateInput = document.getElementById('dueDateInput');
     const text = input.value.trim();
     
     if (text === '') {
@@ -137,32 +135,36 @@ async function addTodo() {
     }
     
     try {
+        console.log('Отправляем задачу:', { text });
+        
         const response = await fetch(`${SUPABASE_URL}/rest/v1/todos`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Prefer': 'return=representation'
             },
-            body: JSON.stringify({
-                text: text,
-                priority: prioritySelect.value,
-                due_date: dueDateInput.value || null
-            })
+            body: JSON.stringify({ text })
         });
+        
+        console.log('Статус ответа:', response.status);
         
         if (response.ok) {
             const newTodo = await response.json();
+            console.log('Задача добавлена:', newTodo);
             todos.push(newTodo);
             renderTodos();
             input.value = '';
-            dueDateInput.value = '';
             input.focus();
-        } else if (response.status === 401) {
-            logout();
+        } else {
+            const error = await response.json();
+            console.error('Ошибка от Supabase:', error);
+            alert(`Ошибка: ${JSON.stringify(error)}`);
         }
     } catch (error) {
         console.error('Ошибка добавления:', error);
+        alert('Ошибка соединения с сервером');
     }
 }
 
