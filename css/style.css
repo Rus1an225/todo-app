@@ -449,3 +449,32 @@
     border-left: 4px solid #28a745 !important;
     padding-left: 8px;
 }
+
+body.dark-theme {
+    background: #1a1a2e;
+}
+body.dark-theme .container {
+    background: #2a2a3e;
+    color: #e0e0e0;
+}
+body.dark-theme .todo-item {
+    background: #3a3a5e;
+}
+body.dark-theme #todoInput {
+    background: #3a3a5e;
+    color: #e0e0e0;
+    border-color: #555;
+}
+
+.priority-high .todo-text {
+    border-left: 4px solid #dc3545 !important;
+    padding-left: 8px;
+}
+.priority-medium .todo-text {
+    border-left: 4px solid #ffc107 !important;
+    padding-left: 8px;
+}
+.priority-low .todo-text {
+    border-left: 4px solid #28a745 !important;
+    padding-left: 8px;
+}

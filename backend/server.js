@@ -148,9 +148,6 @@ app.delete('/api/todos/:id', async (req, res) => {
     }
 });
 
-// ===== ЗАПУСК =====
-
-// ВАЖНО: сейчас force: true (пересоздаст таблицы)
 sequelize.sync({ force: false }).then(() => {
     app.listen(PORT, () => {
         console.log(`✅ Сервер запущен на http://localhost:${PORT}`);

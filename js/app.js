@@ -128,6 +128,8 @@ async function loadTodos() {
 
 async function addTodo() {
     const input = document.getElementById('todoInput');
+    const prioritySelect = document.getElementById('prioritySelect');
+    const dueDateInput = document.getElementById('dueDateInput');
     const text = input.value.trim();
     
     if (text === '') {
@@ -137,7 +139,6 @@ async function addTodo() {
     
     try {
         const userId = localStorage.getItem('userId');
-        
         if (!userId) {
             alert('Ошибка: пользователь не авторизован');
             return;
@@ -153,29 +154,19 @@ async function addTodo() {
             },
             body: JSON.stringify({
                 text: text,
+                priority: prioritySelect.value,
+                due_date: dueDateInput.value || null,
                 user_id: userId
             })
         });
         
         if (response.ok) {
-            const text = await response.text();
-            let newTodo;
-            if (text) {
-                const result = JSON.parse(text);
-                newTodo = Array.isArray(result) ? result[0] : result;
-            } else {
-                // Если ответ пустой, создаём локальную задачу
-                newTodo = {
-                    id: Date.now(),
-                    text: text,
-                    completed: false,
-                    user_id: userId
-                };
-            }
-            console.log('Задача добавлена:', newTodo);
+            const result = await response.json();
+            const newTodo = Array.isArray(result) ? result[0] : result;
             todos.push(newTodo);
             renderTodos();
             input.value = '';
+            dueDateInput.value = '';
             input.focus();
         } else {
             const error = await response.text();
@@ -236,17 +227,8 @@ async function toggleTodo(id) {
         });
         
         if (response.ok) {
-            const text = await response.text();
-            if (text) {
-                const updated = JSON.parse(text);
-                const index = todos.findIndex(t => t.id === id);
-                todos[index] = Array.isArray(updated) ? updated[0] : updated;
-            } else {
-                todo.completed = !todo.completed;
-            }
+            todo.completed = !todo.completed;
             renderTodos();
-        } else if (response.status === 401) {
-            logout();
         } else {
             const error = await response.text();
             console.error('Ошибка обновления:', error);
