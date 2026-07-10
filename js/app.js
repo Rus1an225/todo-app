@@ -158,18 +158,29 @@ async function addTodo() {
         });
         
         if (response.ok) {
-            const result = await response.json();
-            // Supabase возвращает массив с созданной задачей
-            const newTodo = Array.isArray(result) ? result[0] : result;
+            const text = await response.text();
+            let newTodo;
+            if (text) {
+                const result = JSON.parse(text);
+                newTodo = Array.isArray(result) ? result[0] : result;
+            } else {
+                // Если ответ пустой, создаём локальную задачу
+                newTodo = {
+                    id: Date.now(),
+                    text: text,
+                    completed: false,
+                    user_id: userId
+                };
+            }
             console.log('Задача добавлена:', newTodo);
             todos.push(newTodo);
             renderTodos();
             input.value = '';
             input.focus();
         } else {
-            const error = await response.json();
+            const error = await response.text();
             console.error('Ошибка от Supabase:', error);
-            alert(`Ошибка: ${error.message || 'Не удалось добавить задачу'}`);
+            alert('Не удалось добавить задачу');
         }
     } catch (error) {
         console.error('Ошибка добавления:', error);
@@ -225,12 +236,20 @@ async function toggleTodo(id) {
         });
         
         if (response.ok) {
-            const updated = await response.json();
-            const index = todos.findIndex(t => t.id === id);
-            todos[index] = updated[0];
+            const text = await response.text();
+            if (text) {
+                const updated = JSON.parse(text);
+                const index = todos.findIndex(t => t.id === id);
+                todos[index] = Array.isArray(updated) ? updated[0] : updated;
+            } else {
+                todo.completed = !todo.completed;
+            }
             renderTodos();
         } else if (response.status === 401) {
             logout();
+        } else {
+            const error = await response.text();
+            console.error('Ошибка обновления:', error);
         }
     } catch (error) {
         console.error('Ошибка обновления:', error);
