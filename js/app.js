@@ -143,8 +143,6 @@ async function addTodo() {
             return;
         }
         
-        console.log('Отправляем задачу:', { text, user_id: userId });
-        
         const response = await fetch(`${SUPABASE_URL}/rest/v1/todos`, {
             method: 'POST',
             headers: {
@@ -159,10 +157,10 @@ async function addTodo() {
             })
         });
         
-        console.log('Статус ответа:', response.status);
-        
         if (response.ok) {
-            const newTodo = await response.json();
+            const result = await response.json();
+            // Supabase возвращает массив с созданной задачей
+            const newTodo = Array.isArray(result) ? result[0] : result;
             console.log('Задача добавлена:', newTodo);
             todos.push(newTodo);
             renderTodos();
@@ -180,6 +178,12 @@ async function addTodo() {
 }
 
 async function deleteTodo(id) {
+    console.log('Удаляем задачу с id:', id);
+    if (id === undefined || id === null || isNaN(id)) {
+        console.error('Ошибка: неверный id для удаления', id);
+        return;
+    }
+    
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/todos?id=eq.${id}`, {
             method: 'DELETE',
@@ -194,9 +198,14 @@ async function deleteTodo(id) {
             renderTodos();
         } else if (response.status === 401) {
             logout();
+        } else {
+            const error = await response.json();
+            console.error('Ошибка удаления:', error);
+            alert('Не удалось удалить задачу');
         }
     } catch (error) {
         console.error('Ошибка удаления:', error);
+        alert('Ошибка соединения с сервером');
     }
 }
 
@@ -352,6 +361,11 @@ function renderTodos() {
     
     document.querySelectorAll('.todo-item').forEach(item => {
         const id = parseInt(item.dataset.id);
+        if (isNaN(id)) {
+            console.error('Ошибка: id не число', item.dataset.id);
+            return;
+        }
+        
         const checkbox = item.querySelector('.todo-checkbox');
         checkbox.addEventListener('change', () => toggleTodo(id));
         const deleteBtn = item.querySelector('.todo-delete');
