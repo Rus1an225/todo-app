@@ -58,17 +58,17 @@ async function handleAuth() {
     const password = document.getElementById('authPassword').value.trim();
     const errorEl = document.getElementById('authError');
     
-	if (!email || !password) {
-    errorEl.textContent = 'Заполните все поля';
-    errorEl.classList.add('show');
-    return;
+    if (!email || !password) {
+        errorEl.textContent = 'Заполните все поля';
+        errorEl.classList.add('show');
+        return;
     }
 
-	if (password.length < 6) {
-    errorEl.textContent = 'Пароль должен быть не менее 6 символов';
-    errorEl.classList.add('show');
-    return;
-	}
+    if (password.length < 6) {
+        errorEl.textContent = 'Пароль должен быть не менее 6 символов';
+        errorEl.classList.add('show');
+        return;
+    }
     
     const isRegister = document.getElementById('authButton').textContent === 'Зарегистрироваться';
     
@@ -83,6 +83,7 @@ async function handleAuth() {
         if (data.access_token) {
             token = data.access_token;
             localStorage.setItem('token', token);
+            localStorage.setItem('userId', data.user.id);
             errorEl.textContent = '';
             errorEl.classList.remove('show');
             checkAuth();
@@ -135,7 +136,14 @@ async function addTodo() {
     }
     
     try {
-        console.log('Отправляем задачу:', { text });
+        const userId = localStorage.getItem('userId');
+        
+        if (!userId) {
+            alert('Ошибка: пользователь не авторизован');
+            return;
+        }
+        
+        console.log('Отправляем задачу:', { text, user_id: userId });
         
         const response = await fetch(`${SUPABASE_URL}/rest/v1/todos`, {
             method: 'POST',
@@ -145,7 +153,10 @@ async function addTodo() {
                 'Authorization': `Bearer ${token}`,
                 'Prefer': 'return=representation'
             },
-            body: JSON.stringify({ text })
+            body: JSON.stringify({
+                text: text,
+                user_id: userId
+            })
         });
         
         console.log('Статус ответа:', response.status);
@@ -160,7 +171,7 @@ async function addTodo() {
         } else {
             const error = await response.json();
             console.error('Ошибка от Supabase:', error);
-            alert(`Ошибка: ${JSON.stringify(error)}`);
+            alert(`Ошибка: ${error.message || 'Не удалось добавить задачу'}`);
         }
     } catch (error) {
         console.error('Ошибка добавления:', error);
